@@ -4,6 +4,7 @@
 import adsk.core, adsk.fusion, adsk.cam, traceback
 
 from . import Logger
+from . import NS
 
 _app = None
 _ui  = None
@@ -14,6 +15,7 @@ _handlers = []
 _panel = None
 
 
+
 class ToothedPanel():
     def __init__(self, inputs):
         global _app, _ui
@@ -21,18 +23,24 @@ class ToothedPanel():
         self.origin = adsk.core.Point3D.create(0,0,0)
         self.panelWidth = inputs.itemById("panel_width")
         self.panelHeight = inputs.itemById("panel_height")
-        self.teethWidth = inputs.itemById("teeth_width")
-        self.teethDepth = inputs.itemById("teeth_depth")
 
-        self.topCount = inputs.itemById("top_teeth_count")
-        self.leftCount = inputs.itemById("left_teeth_count")
-        self.rightCount = inputs.itemById("right_teeth_count") 
-        self.bottomCount = inputs.itemById("bottom_teeth_count")
+        self.topInputs = self.loadSideControls("top", inputs)
+        self.rightInputs = self.loadSideControls("right", inputs)
+        self.bottomInputs = self.loadSideControls("bottom", inputs)
+        self.leftInputs = self.loadSideControls("left", inputs)
 
         self.up = adsk.core.Vector3D.create(0, 1, 0)
         self.down = adsk.core.Vector3D.create(0, -1, 0)
         self.left = adsk.core.Vector3D.create(-1, 0, 0)
         self.right = adsk.core.Vector3D.create(1, 0, 0)
+
+    def loadSideControls(self, id, inputs):
+        return NS.Namespace(
+            teethWidth=inputs.itemById("%s_teeth_width" % id),
+            teethDepth=inputs.itemById("%s_teeth_depth" % id),
+            teethCount=inputs.itemById("%s_teeth_count" % id),            
+        )
+
 
     def setOrigin(self, pnt):
         self.origin = pnt
@@ -46,7 +54,11 @@ class ToothedPanel():
             retVector.scaleBy(scale)
             return retVector
        
-    def generateSide(self, vProgress, vRelief, length, tWidth, tDepth, tCount):
+    def generateSide(self, vProgress, vRelief, length, inputs):
+        tWidth = inputs.teethWidth.value
+        tDepth = inputs.teethDepth.value
+        tCount = inputs.teethCount.value
+ 
         vectors = []
         if tCount < 0:
             raise ValueError("invalid tCount")
@@ -78,25 +90,12 @@ class ToothedPanel():
         try:
             width = self.panelWidth.value
             height = self.panelHeight.value
-            tWidth = self.teethWidth.value
-            tDepth = self.teethDepth.value
-
-            topCnt = self.topCount.value
-            leftCnt = self.leftCount.value
-            rightCnt = self.rightCount.value
-            bottomCnt = self.bottomCount.value
-
-            Logger.getLogger().info("teeth:[%f:%f] %d,%d,%d,%d" % (tWidth, tDepth, topCnt, leftCnt, rightCnt, bottomCnt))
-
-            # pnt0 = self.origin.copy()
-            # pnt1 = self.origin.copy()
-            # pnt1.translateBy( adsk.core.Vector3D.create( width, height, 0))
 
             vectors = []
-            vectors += self.generateSide(self.up, self.right, height, tWidth, tDepth, leftCnt)
-            vectors += self.generateSide(self.right, self.down, width, tWidth, tDepth, topCnt)
-            vectors += self.generateSide(self.down, self.left, height, tWidth, tDepth, rightCnt)
-            vectors += self.generateSide(self.left, self.up, width, tWidth, tDepth, bottomCnt)
+            vectors += self.generateSide(self.up, self.right, height, self.leftInputs)
+            vectors += self.generateSide(self.right, self.down, width, self.topInputs)
+            vectors += self.generateSide(self.down, self.left, height, self.rightInputs)
+            vectors += self.generateSide(self.left, self.up, width, self.bottomInputs)
 
             sketch = adsk.fusion.Sketch.cast(_app.activeEditObject)
             lines = sketch.sketchCurves.sketchLines
@@ -158,7 +157,6 @@ class MyCommandInputChangedHandler(adsk.core.InputChangedEventHandler):
             inputs = eventArgs.inputs
             cmdInput = eventArgs.input
 
-
         except:
             _ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
 
@@ -211,9 +209,6 @@ class MyCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
         selectionInput = mainInputs.addSelectionInput('origin_select', 'Origin', 'where to originate the panel')
         selectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.SketchPoints)
         selectionInput.setSelectionLimits(1,1)
-
-        mainInputs.addValueInput('teeth_width', 'Teeth Width', 'mm', adsk.core.ValueInput.createByString("thickness * 2"))
-        mainInputs.addValueInput('teeth_depth', 'Teeth depth', 'mm', adsk.core.ValueInput.createByString("thickness"))
 
         # Create distance value input X.
         distanceValueInput = mainInputs.addDistanceValueCommandInput('panel_width', 'Panel Width', adsk.core.ValueInput.createByReal(1))
