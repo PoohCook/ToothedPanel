@@ -1,0 +1,10 @@
+{
+	"autodeskProduct":	"Fusion360",
+	"type":	"script",
+	"author":	"Pooh",
+	"description":	{
+		"":	"Craete a sketc of a toothed panel"
+	},
+	"supportedOS":	"windows|mac",
+	"editEnabled":	true
+}
