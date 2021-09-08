@@ -1,19 +1,14 @@
 #Author-Pooh
-#Description-Craete a sketc of a toothed panel
+#Description-Create a sketch of a toothed panel
 
 import adsk.core, adsk.fusion, adsk.cam, traceback
-
 from . import Logger
 from . import NS
 
 _app = None
 _ui  = None
-
-# Global set of event handlers
-_handlers = []
-
 _panel = None
-
+_handlers = []
 
 
 class ToothedPanel():
@@ -41,13 +36,10 @@ class ToothedPanel():
             teethCount=inputs.itemById("%s_teeth_count" % id),            
         )
 
-
     def setOrigin(self, pnt):
         self.origin = pnt
         self.panelWidth.setManipulator(pnt, adsk.core.Vector3D.create(1, 0, 0))
         self.panelHeight.setManipulator(pnt, adsk.core.Vector3D.create(0, 1, 0))
-
-        Logger.getLogger().info("origin set: %s, %s, %s" % (pnt.x, pnt.y, pnt.z)) 
 
     def createScaledVector(self, vector, scale):
             retVector = vector.copy()
